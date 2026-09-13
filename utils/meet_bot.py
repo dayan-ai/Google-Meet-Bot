@@ -1,11 +1,31 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from utils.audio_recorder import AudioRecorder
 from utils.video_recorder import VideoRecorder
 import time
 import config
+
+BLOCKING_SCREEN_PHRASES = [
+    "you can't join this video call",
+    "check your meeting code",
+    "this meeting has ended",
+    "your account doesn't allow you to join",
+]
+
+JOIN_BUTTON_XPATH = " | ".join([
+    "//span[contains(text(), 'Join now')]",
+    "//span[contains(text(), 'Ask to join')]",
+    "//div[contains(text(), 'Join now')]",
+    "//div[contains(text(), 'Ask to join')]",
+    "//button[.//span[contains(text(), 'Join now')]]",
+    "//button[.//span[contains(text(), 'Ask to join')]]",
+    "//button[contains(@aria-label, 'Join now')]",
+    "//button[contains(@aria-label, 'Ask to join')]",
+])
 
 class GoogleMeetBot:
     def __init__(self):
@@ -63,30 +83,50 @@ class GoogleMeetBot:
         try:
             print(f"Opening meeting: {meeting_url}")
             self.browser.get(meeting_url)
-            time.sleep(8)
-            
+            time.sleep(5)
+
+            blocking_reason = self.detect_blocking_screen()
+            if blocking_reason:
+                self.last_error = f"Google Meet would not let the bot in: {blocking_reason}"
+                print(self.last_error)
+                return False
+
             print("Configuring audio and video...")
-            
             self.turn_off_microphone()
             self.turn_off_camera()
-            
+
             print("Looking for join button...")
             join_successful = self.attempt_to_join()
-            
-            if join_successful:
-                print("Meeting joined successfully")
-                self.meeting_is_active = True
-                time.sleep(5)
-                return True
-            else:
-                print("Join attempt completed")
-                self.meeting_is_active = True
-                return True
-                
+
+            if not join_successful:
+                blocking_reason = self.detect_blocking_screen()
+                self.last_error = blocking_reason or (
+                    "Could not find a join button. The meeting may require a signed-in "
+                    "Google account, or the page took too long to load."
+                )
+                print(self.last_error)
+                return False
+
+            print("Meeting joined successfully")
+            self.meeting_is_active = True
+            time.sleep(3)
+            return True
+
         except Exception as error:
             print(f"Meeting join failed: {error}")
             self.last_error = str(error)
             return False
+
+    def detect_blocking_screen(self):
+        try:
+            page_text = self.browser.find_element(By.TAG_NAME, "body").text.lower()
+        except Exception:
+            return None
+
+        for phrase in BLOCKING_SCREEN_PHRASES:
+            if phrase in page_text:
+                return phrase
+        return None
     
     def turn_off_microphone(self):
         microphone_selectors = [
@@ -127,32 +167,16 @@ class GoogleMeetBot:
                 continue
     
     def attempt_to_join(self):
-        join_button_options = [
-            ("XPATH", "//span[contains(text(), 'Join now')]"),
-            ("XPATH", "//span[contains(text(), 'Ask to join')]"),
-            ("XPATH", "//div[contains(text(), 'Join now')]"),
-            ("CSS", "[data-testid='join-button']"),
-            ("CSS", "button[jsname='Qx7uuf']")
-        ]
-        
-        for search_method, selector in join_button_options:
-            try:
-                if search_method == "XPATH":
-                    join_button = self.browser.find_element(By.XPATH, selector)
-                else:
-                    join_button = self.browser.find_element(By.CSS_SELECTOR, selector)
-                
-                if join_button.is_displayed() and join_button.is_enabled():
-                    join_button.click()
-                    print(f"Clicked join button using: {selector}")
-                    return True
-            except:
-                continue
-        
-        print("Join button not found, trying Enter key")
-        self.browser.find_element(By.TAG_NAME, 'body').send_keys(Keys.ENTER)
-        time.sleep(2)
-        return False
+        try:
+            join_button = WebDriverWait(self.browser, 25).until(
+                EC.element_to_be_clickable((By.XPATH, JOIN_BUTTON_XPATH))
+            )
+            join_button.click()
+            print("Clicked join button")
+            return True
+        except TimeoutException:
+            print("Join button never appeared")
+            return False
     
     def start_recording(self, session_name):
         if not self.meeting_is_active:
