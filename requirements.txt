@@ -3,6 +3,7 @@ fastapi
 fpdf2
 numpy
 openai-whisper
+psutil
 selenium
 sounddevice
 soundfile

@@ -6,7 +6,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from utils.audio_recorder import AudioRecorder
 from utils.video_recorder import VideoRecorder
+import os
 import time
+import psutil
 import config
 
 BLOCKING_SCREEN_PHRASES = [
@@ -27,6 +29,20 @@ JOIN_BUTTON_XPATH = " | ".join([
     "//button[contains(@aria-label, 'Ask to join')]",
 ])
 
+def close_stale_automation_chrome():
+    profile_dir = os.path.abspath(config.CHROME_USER_DATA_DIR)
+    for proc in psutil.process_iter(["name", "cmdline"]):
+        try:
+            name = (proc.info["name"] or "").lower()
+            if "chrome" not in name:
+                continue
+            cmdline = proc.info["cmdline"] or []
+            if any(profile_dir in arg for arg in cmdline):
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+
 class GoogleMeetBot:
     def __init__(self):
         self.browser = None
@@ -36,6 +52,9 @@ class GoogleMeetBot:
         self.last_error = None
 
     def setup_browser(self):
+        close_stale_automation_chrome()
+        time.sleep(1)
+
         browser_options = Options()
         browser_options.add_experimental_option("detach", True)
         browser_options.add_argument("--use-fake-ui-for-media-stream")
