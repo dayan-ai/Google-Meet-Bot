@@ -209,7 +209,9 @@ class GoogleMeetBot:
 
             print(f"Starting video recording: {session_name}")
             self.video_recorder = VideoRecorder()
-            video_started = self.video_recorder.start_recording(session_name, config.RECORDINGS_DIR)
+            video_started = self.video_recorder.start_recording(
+                session_name, config.RECORDINGS_DIR, window_title=self.browser.title
+            )
 
             if audio_started and video_started:
                 print("Recording started")

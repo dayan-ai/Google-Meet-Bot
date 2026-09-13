@@ -117,6 +117,9 @@ Meet_Bot/
 - Make sure no other process is using `chrome_profile/` (close any bot-launched Chrome window first)
 - Sign in manually inside the bot's Chrome window; the session persists across runs
 
+**"Transcription services unavailable or failed" even with clear speech:**
+- PyPI's `openai-whisper` wheel can be broken on some Python versions (installs metadata but not the actual package). `requirements.txt` installs it straight from GitHub source to avoid this — if you installed before this fix, run `pip uninstall openai-whisper` then `pip install -r requirements.txt` again.
+
 **Transcription Not Working:**
 - Check FFmpeg installation (Windows users)
 - Verify microphone permissions
