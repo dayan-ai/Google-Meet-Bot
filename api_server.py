@@ -25,6 +25,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
+    allow_private_network=True,
 )
 
 lock = threading.Lock()
