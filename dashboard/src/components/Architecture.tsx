@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 const steps = [
-  { label: "Your machine", detail: "Python + Streamlit control panel" },
+  { label: "Your machine", detail: "Local API server (FastAPI) or Streamlit" },
   { label: "Chrome via Selenium", detail: "Joins the Meet, mutes mic & camera" },
   { label: "Local capture", detail: "sounddevice + ffmpeg record audio & screen" },
   { label: "Whisper / AssemblyAI", detail: "Speech turned into text" },
@@ -26,8 +26,9 @@ export default function Architecture() {
         <p className="mt-3 text-muted">
           Joining a live call and recording your microphone and screen both need a real
           desktop environment. A serverless host like Vercel can&apos;t launch a browser
-          for you or reach your hardware — so the bot itself always runs locally, while
-          this page just showcases and documents it.
+          for you or reach your hardware — so the bot itself always runs locally. Start its
+          local API server and this page becomes a real control panel for it, over a
+          request your own browser makes straight to your own machine.
         </p>
       </motion.div>
 

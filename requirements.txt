@@ -1,4 +1,5 @@
 assemblyai
+fastapi
 fpdf2
 numpy
 openai-whisper
@@ -6,3 +7,4 @@ selenium
 sounddevice
 soundfile
 streamlit
+uvicorn

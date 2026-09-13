@@ -42,14 +42,34 @@ streamlit run app.py
 
 The first time you join a meeting, a dedicated Chrome window (separate from your regular browser profile) will open under `chrome_profile/`. If the meeting requires a signed-in Google account, sign in inside that window once — it stays logged in for future runs.
 
+### Optional: control it from the web dashboard
+
+The `dashboard/` folder is a hosted Next.js control panel. By default it only shows a
+simulated demo, but it becomes a real control panel for your bot if you also run the
+local API server:
+
+```
+Run the local API server (from the project root, with venv active)
+uvicorn api_server:app --host 127.0.0.1 --port 8000
+```
+
+With that running, open the [live dashboard](https://dashboard-mauve-zeta-23.vercel.app)
+(or `npm run dev` inside `dashboard/` for a local copy) — its "Try the workflow" section
+detects the server on `127.0.0.1:8000` and switches from a simulated demo to actually
+joining, recording, and transcribing through it. The API only accepts requests from that
+dashboard's own origin (or `localhost:3000`), and only listens on `127.0.0.1`, so it's not
+reachable from other devices on your network.
+
 ## 📁 Project Structure
 
 ```
 Meet_Bot/
 ├── 📄 app.py # Main Streamlit application
+├── 🌐 api_server.py # FastAPI backend for the web dashboard
 ├── ⚙️ config.py # Configuration settings
 ├── 📋 requirements.txt # Python dependencies
 ├── 🔒 .env # Environment variables
+├── 📂 dashboard/ # Next.js landing page + live control panel
 ├── 📂 assets/
 │ ├── 🎵 recordings/ # Audio + video files
 │ └── 📄 transcripts/
