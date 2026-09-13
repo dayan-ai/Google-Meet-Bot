@@ -2,8 +2,6 @@
 
 **Automate Google Meet attendance, record audio + video, and generate AI-powered transcriptions**
 
-Maintained by [dayan-ai](https://github.com/dayan-ai) — a fork of the original project by [Pooja Verma](https://github.com/pooja30123/Google-Meet-Bot), extended with video recording, a dedicated automation Chrome profile, and a companion landing page.
-
 [![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red?style=for-the-badge&logo=youtube)](https://youtu.be/NALaPhlwDks)
 
 ## 🚀 Features
@@ -115,7 +113,7 @@ This bot joins meetings as a visible participant and records audio/video. Make s
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE). Original work Copyright (c) 2025 Pooja Verma; modifications Copyright (c) 2026 dayan-ai.
+MIT License - see [LICENSE](LICENSE).
 
 ---
 
