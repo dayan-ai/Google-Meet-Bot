@@ -6,4 +6,3 @@ selenium
 sounddevice
 soundfile
 streamlit
-webdriver-manager

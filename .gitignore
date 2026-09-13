@@ -75,6 +75,11 @@ assets/transcripts/
 demo.mp4
 *.mp4
 chromedriver.exe
+chrome_profile/
 
 # Streamlit
 .streamlit/
+
+# Local agent tooling (environment-specific, not part of the project)
+.agents/
+.claude/

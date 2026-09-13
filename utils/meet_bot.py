@@ -1,10 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
 from utils.audio_recorder import AudioRecorder
+from utils.video_recorder import VideoRecorder
 import time
 import config
 
@@ -12,8 +11,10 @@ class GoogleMeetBot:
     def __init__(self):
         self.browser = None
         self.audio_recorder = None
+        self.video_recorder = None
         self.meeting_is_active = False
-        
+        self.last_error = None
+
     def setup_browser(self):
         browser_options = Options()
         browser_options.add_experimental_option("detach", True)
@@ -21,7 +22,14 @@ class GoogleMeetBot:
         browser_options.add_argument("--start-maximized")
         browser_options.add_argument("--no-sandbox")
         browser_options.add_argument("--disable-dev-shm-usage")
-        
+        browser_options.add_argument("--disable-blink-features=AutomationControlled")
+        browser_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        browser_options.add_experimental_option("useAutomationExtension", False)
+
+        if config.CHROME_USER_DATA_DIR:
+            browser_options.add_argument(f"--user-data-dir={config.CHROME_USER_DATA_DIR}")
+            browser_options.add_argument(f"--profile-directory={config.CHROME_PROFILE_DIRECTORY}")
+
         media_permissions = {
             "profile.default_content_setting_values": {
                 "media_stream_mic": 1,
@@ -30,33 +38,28 @@ class GoogleMeetBot:
             }
         }
         browser_options.add_experimental_option("prefs", media_permissions)
-        
+
         try:
             print("Setting up Chrome browser...")
-            chrome_service = Service(ChromeDriverManager(driver_version="139.0.7258.80").install())
-            self.browser = webdriver.Chrome(service=chrome_service, options=browser_options)
-            
-            self.browser.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
-            print("✅ Chrome setup successful")
+            self.browser = webdriver.Chrome(options=browser_options)
+
+            self.browser.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"}
+            )
+
+            print("Chrome setup successful")
             return True
-            
+
         except Exception as error:
-            print("Chrome setup failed, trying fallback...")
-            try:
-                chrome_service = Service(ChromeDriverManager().install())
-                self.browser = webdriver.Chrome(service=chrome_service, options=browser_options)
-                self.browser.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-                print("✅ Fallback Chrome working")
-                return True
-            except Exception as fallback_error:
-                print(f"Both attempts failed: {fallback_error}")
-                return False
-    
+            print(f"Chrome setup failed: {error}")
+            self.last_error = str(error)
+            return False
+
     def join_meeting(self, meeting_url):
         if not self.setup_browser():
             return False
-        
+
         try:
             print(f"Opening meeting: {meeting_url}")
             self.browser.get(meeting_url)
@@ -71,7 +74,7 @@ class GoogleMeetBot:
             join_successful = self.attempt_to_join()
             
             if join_successful:
-                print("✅ Meeting joined successfully")
+                print("Meeting joined successfully")
                 self.meeting_is_active = True
                 time.sleep(5)
                 return True
@@ -82,6 +85,7 @@ class GoogleMeetBot:
                 
         except Exception as error:
             print(f"Meeting join failed: {error}")
+            self.last_error = str(error)
             return False
     
     def turn_off_microphone(self):
@@ -158,26 +162,38 @@ class GoogleMeetBot:
         try:
             print(f"Starting audio recording: {session_name}")
             self.audio_recorder = AudioRecorder()
-            recording_started = self.audio_recorder.start_recording(session_name, config.RECORDINGS_DIR)
-            
-            if recording_started:
-                print("✅ Recording started")
+            audio_started = self.audio_recorder.start_recording(session_name, config.RECORDINGS_DIR)
+
+            print(f"Starting video recording: {session_name}")
+            self.video_recorder = VideoRecorder()
+            video_started = self.video_recorder.start_recording(session_name, config.RECORDINGS_DIR)
+
+            if audio_started and video_started:
+                print("Recording started")
                 return True
             else:
                 print("Recording failed to start")
                 return False
-                
+
         except Exception as error:
             print(f"Recording error: {error}")
             return False
-    
+
     def stop_recording(self):
+        audio_file_path = None
+        video_file_path = None
+
         if self.audio_recorder:
-            print("Stopping recording...")
+            print("Stopping audio recording...")
             audio_file_path = self.audio_recorder.stop_recording()
-            print(f"Recording saved: {audio_file_path}")
-            return audio_file_path
-        return None
+            print(f"Audio saved: {audio_file_path}")
+
+        if self.video_recorder:
+            print("Stopping video recording...")
+            video_file_path = self.video_recorder.stop_recording()
+            print(f"Video saved: {video_file_path}")
+
+        return audio_file_path, video_file_path
     
     def leave_meeting(self):
         print("Leaving meeting...")

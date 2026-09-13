@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from datetime import datetime
 from utils.meet_bot import GoogleMeetBot
@@ -33,30 +34,35 @@ def join_meeting_and_start_recording(meeting_url):
         else:
             st.error("Failed to start recording")
     else:
-        st.error("Failed to join meeting")
+        error_detail = st.session_state.meet_bot.last_error
+        st.error(f"Failed to join meeting: {error_detail}" if error_detail else "Failed to join meeting")
 
 def stop_recording_and_generate_files():
-    audio_file_path = st.session_state.meet_bot.stop_recording()
-    
+    audio_file_path, video_file_path = st.session_state.meet_bot.stop_recording()
+
     if audio_file_path:
         transcription_service = TranscriptionService()
         transcript_text = transcription_service.transcribe_audio(audio_file_path)
-        
+
         file_generator = FileGenerator()
         text_file_path = file_generator.create_text_file(transcript_text, st.session_state.current_session)
         pdf_file_path = file_generator.create_pdf_file(transcript_text, st.session_state.current_session)
-        
-        display_results(audio_file_path, transcript_text, text_file_path, pdf_file_path)
+
+        display_results(audio_file_path, video_file_path, transcript_text, text_file_path, pdf_file_path)
         reset_session()
 
-def display_results(audio_file_path, transcript_text, text_file_path, pdf_file_path):
+def display_results(audio_file_path, video_file_path, transcript_text, text_file_path, pdf_file_path):
     st.success("✅ Recording completed and transcript generated")
-    
+
     st.audio(audio_file_path, format='audio/wav')
+
+    if video_file_path and os.path.exists(video_file_path):
+        st.video(video_file_path)
+
     st.text_area("Generated Transcript:", transcript_text, height=300)
-    
-    col1, col2 = st.columns(2)
-    
+
+    col1, col2, col3 = st.columns(3)
+
     with col1:
         with open(text_file_path, 'r', encoding='utf-8') as text_file:
             st.download_button(
@@ -64,7 +70,7 @@ def display_results(audio_file_path, transcript_text, text_file_path, pdf_file_p
                 text_file.read(),
                 file_name=f"transcript_{st.session_state.current_session}.txt"
             )
-    
+
     with col2:
         with open(pdf_file_path, 'rb') as pdf_file:
             st.download_button(
@@ -73,6 +79,16 @@ def display_results(audio_file_path, transcript_text, text_file_path, pdf_file_p
                 file_name=f"transcript_{st.session_state.current_session}.pdf",
                 mime="application/pdf"
             )
+
+    with col3:
+        if video_file_path and os.path.exists(video_file_path):
+            with open(video_file_path, 'rb') as video_file:
+                st.download_button(
+                    "🎬 Download Video File",
+                    video_file.read(),
+                    file_name=f"recording_{st.session_state.current_session}.mp4",
+                    mime="video/mp4"
+                )
 
 def reset_session():
     st.session_state.is_recording = False

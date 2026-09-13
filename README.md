@@ -1,13 +1,15 @@
 # 🎤 Google Meet Bot
 
-**Automate Google Meet attendance, record audio, and generate AI-powered transcriptions**
+**Automate Google Meet attendance, record audio + video, and generate AI-powered transcriptions**
+
+Maintained by [dayan-ai](https://github.com/dayan-ai) — a fork of the original project by [Pooja Verma](https://github.com/pooja30123/Google-Meet-Bot), extended with video recording, a dedicated automation Chrome profile, and a companion landing page.
 
 [![Demo Video](https://img.shields.io/badge/Demo-Watch%20Video-red?style=for-the-badge&logo=youtube)](https://youtu.be/NALaPhlwDks)
 
 ## 🚀 Features
 
 ✅ **Automatic Meeting Join** - Bot joins Google Meet sessions automatically  
-✅ **Real-time Recording** - Captures meeting audio in the background  
+✅ **Real-time Recording** - Captures meeting audio and screen video in the background  
 ✅ **AI Transcription** - Uses OpenAI Whisper (local) and AssemblyAI (cloud)  
 ✅ **File Generation** - Creates PDF and text transcripts  
 ✅ **Simple Interface** - Clean Streamlit web UI  
@@ -18,7 +20,7 @@
 
 ```
 Clone repository
-git clone https://github.com/pooja30123/Google-Meet-Bot.git
+git clone https://github.com/dayan-ai/Google-Meet-Bot.git
 cd Google-Meet-Bot
 
 Setup virtual environment
@@ -40,6 +42,8 @@ Run the app
 streamlit run app.py
 ```
 
+The first time you join a meeting, a dedicated Chrome window (separate from your regular browser profile) will open under `chrome_profile/`. If the meeting requires a signed-in Google account, sign in inside that window once — it stays logged in for future runs.
+
 ## 📁 Project Structure
 
 ```
@@ -49,12 +53,13 @@ Meet_Bot/
 ├── 📋 requirements.txt # Python dependencies
 ├── 🔒 .env # Environment variables
 ├── 📂 assets/
-│ ├── 🎵 recordings/ # Audio files
+│ ├── 🎵 recordings/ # Audio + video files
 │ └── 📄 transcripts/
 │ ├── text/ # Text transcripts
 │ └── pdf/ # PDF transcripts
 └── 🛠 utils/
 ├── 🎙️ audio_recorder.py # Audio recording logic
+├── 🎬 video_recorder.py # Screen recording logic
 ├── 🤖 meet_bot.py # Google Meet automation
 ├── 📝 transcription.py # AI transcription service
 └── 📋 file_generator.py # PDF/text file creation
@@ -65,9 +70,9 @@ Meet_Bot/
 
 1. **Enter Google Meet URL** in the web interface
 2. **Click Join Meeting** - Chrome opens and bot joins automatically
-3. **Recording starts** - Audio captured in background
+3. **Recording starts** - Audio and screen video captured in background
 4. **Click Stop** - AI processes speech to text
-5. **Download files** - Get audio, PDF, and text transcripts
+5. **Download files** - Get audio, video, PDF, and text transcripts
 
 ## 🧠 AI Technologies Used
 
@@ -75,19 +80,24 @@ Meet_Bot/
 - **AssemblyAI** - Cloud-based transcription service  
 - **Selenium WebDriver** - Browser automation
 - **Streamlit** - Web interface framework
+- **FFmpeg** - Screen recording (gdigrab)
 
 ## 📋 Requirements
 
 - Python 3.8+
-- Chrome Browser (version 139+ recommended)
-- FFmpeg (for audio processing)
+- Chrome Browser (Selenium Manager auto-resolves a matching driver)
+- FFmpeg (for audio/video processing)
 - Microphone access
 
 ## 🔧 Troubleshooting
 
 **Chrome Driver Issues:**
-- App auto-downloads correct ChromeDriver for Chrome 139
+- Selenium Manager auto-downloads the ChromeDriver matching your installed Chrome version
 - Ensure you have Google Chrome installed
+
+**"This browser may not be secure" / can't sign in:**
+- Make sure no other process is using `chrome_profile/` (close any bot-launched Chrome window first)
+- Sign in manually inside the bot's Chrome window; the session persists across runs
 
 **Transcription Not Working:**
 - Check FFmpeg installation (Windows users)
@@ -99,10 +109,13 @@ Meet_Bot/
 - Check audio input levels
 - Test with music/voice playing
 
+## ⚠️ A Note on Recording Consent
+
+This bot joins meetings as a visible participant and records audio/video. Make sure you have the right to record everyone on the call — consent requirements vary by jurisdiction.
 
 ## 📄 License
 
-MIT License - Feel free to use and modify for educational purposes.
+MIT License - see [LICENSE](LICENSE). Original work Copyright (c) 2025 Pooja Verma; modifications Copyright (c) 2026 dayan-ai.
 
 ---
 
