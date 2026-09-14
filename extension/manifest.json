@@ -5,7 +5,7 @@
   "description": "Records Google Meet audio and video from within the meeting tab and generates AI meeting notes.",
   "minimum_chrome_version": "109",
   "permissions": ["tabCapture", "activeTab", "offscreen", "storage"],
-  "host_permissions": ["https://meet.google.com/*"],
+  "host_permissions": ["https://meet.google.com/*", "http://localhost:8000/*"],
   "background": {
     "service_worker": "background.js"
   },

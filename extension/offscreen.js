@@ -1,3 +1,5 @@
+const BACKEND_URL = "http://localhost:8000/api/process-meeting";
+
 let mediaRecorder = null;
 let recordedChunks = [];
 let captureStream = null;
@@ -12,9 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "offscreen-stop-recording") {
-    stopRecording()
-      .then((result) => sendResponse({ success: true, ...result }))
-      .catch((error) => sendResponse({ success: false, error: String(error) }));
+    stopRecordingAndProcess(sendResponse);
     return true;
   }
 
@@ -56,7 +56,7 @@ async function startRecording(streamId) {
   mediaRecorder.start(1000);
 }
 
-async function stopRecording() {
+async function finalizeRecording() {
   if (!mediaRecorder) {
     throw new Error("No active recording");
   }
@@ -75,14 +75,41 @@ async function stopRecording() {
   captureStream = null;
   recordedChunks = [];
 
-  // Phase 1: save locally so we can verify capture end-to-end before this
-  // gets replaced with an upload to the AI backend in Phase 2.
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `meet-recording-${Date.now()}.webm`;
-  link.click();
-  URL.revokeObjectURL(url);
+  return blob;
+}
 
-  return { size: blob.size };
+async function stopRecordingAndProcess(sendResponse) {
+  let blob;
+  try {
+    blob = await finalizeRecording();
+  } catch (error) {
+    sendResponse({ success: false, error: String(error) });
+    return;
+  }
+
+  sendResponse({ success: true, size: blob.size });
+
+  try {
+    const result = await uploadForProcessing(blob);
+    chrome.runtime.sendMessage({ type: "processing-complete", result });
+  } catch (error) {
+    chrome.runtime.sendMessage({ type: "processing-error", error: String(error) });
+  }
+}
+
+async function uploadForProcessing(blob) {
+  const formData = new FormData();
+  formData.append("file", blob, `meeting-${Date.now()}.webm`);
+
+  const response = await fetch(BACKEND_URL, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.detail || `Backend returned ${response.status}`);
+  }
+
+  return response.json();
 }

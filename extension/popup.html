@@ -17,7 +17,7 @@
     }
     body {
       margin: 0;
-      width: 280px;
+      width: 320px;
       background: var(--bg);
       color: var(--fg);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -49,9 +49,14 @@
       height: 7px;
       border-radius: 50%;
       background: var(--border);
+      flex-shrink: 0;
     }
     .status-dot.recording {
       background: var(--danger);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .status-dot.busy {
+      background: var(--cyan);
       animation: pulse 1.4s ease-in-out infinite;
     }
     @keyframes pulse {
@@ -67,14 +72,14 @@
       font-weight: 600;
       cursor: pointer;
     }
-    #toggleButton {
+    #actionButton {
       background: var(--indigo);
       color: white;
     }
-    #toggleButton.recording {
+    #actionButton.recording {
       background: var(--danger);
     }
-    #toggleButton:disabled {
+    #actionButton:disabled {
       background: var(--border);
       color: var(--muted);
       cursor: not-allowed;
@@ -84,6 +89,33 @@
       font-size: 11px;
       color: var(--muted);
       line-height: 1.4;
+    }
+    #notesSection {
+      margin-top: 4px;
+    }
+    #notesContent {
+      max-height: 260px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 12px;
+      line-height: 1.5;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+    }
+    .button-row button {
+      flex: 1;
+    }
+    #copyButton, #resetButton {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--fg);
     }
   </style>
 </head>
@@ -103,7 +135,17 @@
       <span id="statusText">Checking meeting tab…</span>
     </div>
 
-    <button id="toggleButton" disabled>Start Recording Notes</button>
+    <button id="actionButton" disabled>Start Recording Notes</button>
+
+    <div id="notesSection" hidden>
+      <div id="notesContent"></div>
+      <div class="button-row">
+        <button id="copyButton">Copy Notes</button>
+        <button id="resetButton">New Recording</button>
+      </div>
+    </div>
+
+    <button id="retryButton" hidden>Try Again</button>
 
     <div class="hint">
       Records this Meet tab's audio and video only. Nothing else on your

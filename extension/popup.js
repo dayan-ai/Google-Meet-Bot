@@ -1,56 +1,102 @@
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
-const toggleButton = document.getElementById("toggleButton");
+const actionButton = document.getElementById("actionButton");
+const notesSection = document.getElementById("notesSection");
+const notesContent = document.getElementById("notesContent");
+const resetButton = document.getElementById("resetButton");
+const retryButton = document.getElementById("retryButton");
+const copyButton = document.getElementById("copyButton");
 
 let activeTab = null;
+let pollHandle = null;
 
-function setUiState({ recording, enabled, message }) {
-  statusDot.classList.toggle("recording", recording);
-  toggleButton.classList.toggle("recording", recording);
-  toggleButton.textContent = recording ? "Stop Recording" : "Start Recording Notes";
-  toggleButton.disabled = !enabled;
-  statusText.textContent = message;
+function stopPolling() {
+  if (pollHandle) {
+    clearInterval(pollHandle);
+    pollHandle = null;
+  }
+}
+
+function render(status) {
+  const { stage, error, result } = status;
+
+  notesSection.hidden = stage !== "done";
+  retryButton.hidden = stage !== "error";
+  actionButton.hidden = stage === "done" || stage === "error";
+
+  statusDot.classList.toggle("recording", stage === "recording");
+  statusDot.classList.toggle("busy", stage === "processing");
+
+  if (stage === "recording") {
+    statusText.textContent = "Recording this meeting";
+    actionButton.textContent = "Stop Recording";
+    actionButton.classList.add("recording");
+    actionButton.disabled = false;
+    stopPolling();
+  } else if (stage === "processing") {
+    statusText.textContent = "Processing AI notes…";
+    actionButton.textContent = "Processing…";
+    actionButton.disabled = true;
+    if (!pollHandle) pollHandle = setInterval(refresh, 1500);
+  } else if (stage === "done") {
+    statusText.textContent = "Notes ready";
+    notesContent.textContent = result?.notes || "(no notes returned)";
+    stopPolling();
+  } else if (stage === "error") {
+    statusText.textContent = error || "Something went wrong";
+    stopPolling();
+  } else {
+    actionButton.classList.remove("recording");
+    actionButton.textContent = "Start Recording Notes";
+    const onMeet = Boolean(activeTab?.url?.startsWith("https://meet.google.com/"));
+    actionButton.disabled = !onMeet;
+    statusText.textContent = onMeet ? "Ready to record" : "Open a Google Meet tab first";
+    stopPolling();
+  }
+}
+
+async function refresh() {
+  const status = await chrome.runtime.sendMessage({ type: "get-status" });
+  render(status);
 }
 
 async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   activeTab = tab;
-
-  if (!tab || !tab.url || !tab.url.startsWith("https://meet.google.com/")) {
-    setUiState({ recording: false, enabled: false, message: "Open a Google Meet tab first" });
-    return;
-  }
-
-  const status = await chrome.runtime.sendMessage({ type: "get-status", tabId: tab.id });
-
-  if (status?.recording) {
-    setUiState({ recording: true, enabled: true, message: "Recording this meeting" });
-  } else {
-    setUiState({ recording: false, enabled: true, message: "Ready to record" });
-  }
+  await refresh();
 }
 
-toggleButton.addEventListener("click", async () => {
-  if (!activeTab) return;
+async function handlePrimaryAction() {
+  const status = await chrome.runtime.sendMessage({ type: "get-status" });
+  actionButton.disabled = true;
 
-  toggleButton.disabled = true;
-
-  const status = await chrome.runtime.sendMessage({ type: "get-status", tabId: activeTab.id });
-
-  const response = status?.recording
-    ? await chrome.runtime.sendMessage({ type: "stop-recording", tabId: activeTab.id })
-    : await chrome.runtime.sendMessage({ type: "start-recording", tabId: activeTab.id });
+  const response =
+    status.stage === "recording"
+      ? await chrome.runtime.sendMessage({ type: "stop-recording" })
+      : await chrome.runtime.sendMessage({ type: "start-recording", tabId: activeTab.id });
 
   if (!response?.success) {
-    setUiState({ recording: false, enabled: true, message: response?.error || "Something went wrong" });
+    render({ stage: "error", error: response?.error || "Something went wrong", result: null });
     return;
   }
 
-  setUiState(
-    response.recording
-      ? { recording: true, enabled: true, message: "Recording this meeting" }
-      : { recording: false, enabled: true, message: "Saved — ready to record again" }
-  );
+  await refresh();
+}
+
+actionButton.addEventListener("click", handlePrimaryAction);
+retryButton.addEventListener("click", async () => {
+  await chrome.runtime.sendMessage({ type: "reset" });
+  await refresh();
+});
+resetButton.addEventListener("click", async () => {
+  await chrome.runtime.sendMessage({ type: "reset" });
+  await refresh();
+});
+copyButton.addEventListener("click", async () => {
+  await navigator.clipboard.writeText(notesContent.textContent || "");
+  const original = copyButton.textContent;
+  copyButton.textContent = "Copied!";
+  setTimeout(() => (copyButton.textContent = original), 1500);
 });
 
 init();
